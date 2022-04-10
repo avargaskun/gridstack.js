@@ -1890,8 +1890,9 @@
    * oldColumn: previous number of columns
    * column:    new column number
    * nodes?:    different sorted list (ex: DOM order) instead of current list
+   * doNotPropagate: if true existing widgets will not be updated (optional)
    */
-  GridStackEngine.prototype._updateNodeWidths = function(oldColumn, column, nodes) {
+  GridStackEngine.prototype._updateNodeWidths = function(oldColumn, column, nodes, doNotPropagate) {
     if (!this.nodes.length || oldColumn === column) { return; }
 
     // cache the current layout in case they want to go back (like 12 -> 1 -> 12) as it requires original data
@@ -1952,8 +1953,9 @@
     var ratio = column / oldColumn;
     nodes.forEach(function(node) {
       if (!node) return;
-      node.x = (column === 1 ? 0 : Math.round(node.x * ratio));
-      node.width = ((column === 1 || oldColumn === 1) ? 1 : (Math.round(node.width * ratio) || 1));
+      node.x = (column === 1 ? 0 : (!doNotPropagate ? Math.round(node.x * ratio) : Math.min(node.x, column - 1)));
+      node.width = ((column === 1 || oldColumn === 1) ? 1 :
+        !doNotPropagate ? (Math.round(node.width * ratio) || 1) : (Math.min(node.w, column)));
       newNodes.push(node);
     });
 
@@ -2009,8 +2011,6 @@
     this.$el.addClass('grid-stack-' + column);
     this.opts.column = this.engine.column = column;
 
-    if (doNotPropagate === true) { return; }
-
     // update the items now - see if the dom order nodes should be passed instead (else default to current list)
     var domNodes;
     if (this.opts.oneColumnModeDomSort && column === 1) {
@@ -2021,7 +2021,7 @@
       });
       if (!domNodes.length) { domNodes = undefined; }
     }
-    this.engine._updateNodeWidths(oldColumn, column, domNodes);
+    this.engine._updateNodeWidths(oldColumn, column, domNodes, doNotPropagate);
 
     // and trigger our event last...
     this.engine._ignoreLayoutsNodeChange = true;
